@@ -1,0 +1,211 @@
+---
+title: "EX2CodePeggy"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Q1 
+> Using a linear regressions framework with unit sales (and/or log unit sales) as the dependent variable, investigate the effect of regular price, feature and rating on sales for each of the three apps. How good are these models? 
+
+# A1-Summmary (Type the answer here)
+For maximized model performance, we can use linear model with all variables (price, feature and rating) on all three products. Based on the analysis we have conducted, "rating" seems to have litte influence on the units sales of app and can be removed if we needs to simplfy the model. 
+It's worth mentioning that current variables can only explained less than 50% of the Product 3's units sales, more variable is needed to excel the model performance.
+
+
+## Best model for Product 1 (Best performance) 
+###R-squared = 0.886
+product1q1best <- lm(UNITS1 ~ REGPR1 + FEAT1 + RATING1, data = ex2)
+stargazer(product1q1best, type = "text")
+
+## Best model for Product 2 (Best performance) 
+### R-squared = 0.67
+product2q1best <- lm(UNITS1 ~ REGPR2 + FEAT2 + RATING2, data = ex2)
+stargazer(product2q1best, type = "text")
+
+# Best model for Product 3 (Best performance)  
+### R-squared = 0.476
+product3model1 <- lm(UNITS3 ~ REGPR3 + FEAT3 + RATING3, data = ex2)
+stargazer(product3model1, type = "text")
+
+## Balance model for Product 1 (simple model with ok performance) 
+### R-squared = 0.87
+product1q1best <- lm(UNITS1 ~ REGPR1 + FEAT1, data = ex2)
+stargazer(product1q1best, type = "text")
+
+## Balance model for Product 2  (simple model with ok performance)
+### R-squared = 0.642
+product2q1best <- lm(UNITS1 ~ REGPR2 + FEAT2, data = ex2)
+stargazer(product2q1best, type = "text")
+
+# Balance model for Product 3 (simple model with ok performance) 
+## R-squared = 0.457
+product3model1 <- lm(UNITS3 ~ REGPR3 + FEAT3 , data = ex2)
+stargazer(product3model1, type = "text")
+
+
+
+# Intial envitonment
+```{r}
+#Set working directory
+#setwd("/Users/teagangeorge/Desktop/513 - Customer Analytics/")
+setwd("/Users/peggy/Documents/UW/CLASS/customer analytics/class2/price_demo_code/ex2/")
+library(stargazer)
+```
+# Data Preprocess 
+## Read in raw data
+```{r}
+ex2 = read.csv("Ex2_Data_R.csv")
+summary(ex2)
+```
+
+## Create log variables of unit sales
+```{r}
+ex2$logunits1 <- log(ex2$UNITS1)
+ex2$logunits2 <- log(ex2$UNITS2)
+ex2$logunits3 <- log(ex2$UNITS3)
+```
+## Create log variables of normalized price
+```{r}
+ex2$logprice1 <- log(ex2$REGPR1)
+ex2$logprice2 <- log(ex2$REGPR2)
+ex2$logprice3 <- log(ex2$REGPR3)
+```
+
+# Product 1 Regressions
+## Create model with all variables
+```{r}
+#linear
+product1model1 <- lm(UNITS1 ~ REGPR1 + FEAT1 + RATING1, data = ex2)
+stargazer(product1model1, type = "text")
+#semi-log
+product1model2 <- lm(logunits1 ~ REGPR1 + FEAT1 + RATING1, data = ex2)
+stargazer(product1model2, type = "text")
+```
+*********
+### _Notes for Product 1 model with all variables:_
+  -  Linear model (model 1)  is best fit for Product 1.
+  -  Multiple R-squared of 0.886 and adj. of 0.883. p-value < 0.01
+  -  All variables are highly statistically significant for product 1 in linear model (model 1).
+
+*********
+## Try simplified model by remove some variable
+#### Removing the rating from the regression does not have much impact on R-squared (0.87).
+```{r}
+product1model3 <- lm(UNITS1 ~ REGPR1 + FEAT1, data = ex2)
+stargazer(product1model3, type = "text")
+```
+#### Removing feature from the regression has huge impact on R-squared (0.240).
+```{r}
+product1model4 <- lm(UNITS1 ~ REGPR1 + RATING1, data = ex2)
+stargazer(product1model4, type = "text")
+```
+#### Removing rating and feature from the regression has huge impact on R-squared (0.239).
+```{r}
+product1model5 <- lm(UNITS1 ~ REGPR1, data = ex2)
+stargazer(product1model5, type = "text")
+```
+#### Removing rating and price from the regression does not have much impact on on R-squared (0.8).
+```{r}
+product1model6 <- lm(UNITS1 ~ FEAT1, data = ex2)
+stargazer(product1model6, type = "text")
+
+product1q1best <- product1model1
+stargazer(product1q1best, type = "text")
+```
+
+***** 
+## _Final Notes for Product 1_
+ - Linear model(model 1) fit the Product 1 the best
+ - It's worth considering to remove "Rating"" from the Produt 1's best model to simplify the model.(0.886 >> 0.87) 
+
+*****
+
+# Product 2 Regressions
+## Create model with all variables
+```{r}
+# linear
+product2model1 <- lm(UNITS2 ~ REGPR2 + FEAT2 + RATING2, data = ex2)
+stargazer(product2model1, type = "text")
+# semi-log
+product2model2 <- lm(logunits2 ~ REGPR2 + FEAT2 + RATING2, data = ex2)
+stargazer(product2model2, type = "text")
+```
+******
+### _Notes for Product 2 model with all variables:_ 
+ - Linear(model 1) has the highest R-squared of 0.67
+ - Multiple R-squared of 0.67 and adj. of 0.661. p-value < 0.01
+ - All variables are highly statistically significant for product 2 in linear model (model 1).
+
+******
+
+## Try simplified model by remove some variable
+#### Removing the rating from the regression does not have much impact on on R-squared (0.642).
+```{r}
+product2model3 <- lm(UNITS2 ~ REGPR2 + FEAT2, data = ex2)
+stargazer(product2model3, type = "text")
+```
+#### Removing the feature from the regression have much impact on R-squared (0.272).
+```{r}
+product2model4 <- lm(UNITS2 ~ REGPR2 + RATING2, data = ex2)
+stargazer(product2model4, type = "text")
+```
+#### Removing the rating and price from the regression have slight impact on on R-squared (0.531).
+```{r}
+product2model5 <- lm(UNITS2 ~ FEAT2, data = ex2)
+stargazer(product2model5, type = "text")
+```
+***** 
+## _Final Notes for Product 2_
+ - Linear model(model 1) fit the Product 2 the best 
+ - It's worth considering to remove "Rating" from the Produt 2's best model to simplify the model. (0.6696 >> 0.6417)
+ - It's not as good as the model for product 1 (diff. in R-squared of 22%). This suggests there is another variable that is affecting unit sales for product 2, other than product 2's own price, rating, and feature.
+
+*****
+
+# Product 3 Regressions
+## Create model with all variables
+```{r}
+# linear 0.476
+product3model1 <- lm(UNITS3 ~ REGPR3 + FEAT3 + RATING3, data = ex2)
+stargazer(product3model1, type = "text")
+# semi-log 0.448
+product3model2 <- lm(logunits3 ~ REGPR3 + FEAT3 + RATING3, data = ex2)
+stargazer(product3model2, type = "text")
+```
+******
+### _Notes for Product 3 model with all variables:_ 
+ -  Linear Model 1 has the highest R-squared
+ -  Bigger gap between R-squared and adjusted R-squared due to inclusion of insignificant variables. 
+ 
+******
+
+## Try simplified model by remove some variable
+#### Removing the rating from the regression does not have much impact on on R-squared (0.468).
+```{r}
+product3model3 <- lm(UNITS3 ~ REGPR3 + FEAT3, data = ex2)
+stargazer(product3model3, type = "text")
+```
+#### Removing the feature from the regression have much impact on R-squared (0.11).
+```{r}
+product3model4 <- lm(UNITS3 ~ REGPR3 + RATING3, data = ex2)
+stargazer(product3model4, type = "text")
+```
+#### Removing the rating and price from the regression have slight impact on on R-squared (0.457).
+```{r}
+product3model5 <- lm(UNITS3 ~ FEAT3, data = ex2)
+stargazer(product3model5, type = "text")
+```
+
+***** 
+## _Final Notes for Product 3_
+ - Linear model (model 1) fit the Product 3 the best, but is the worst of the 3 models as less than half of the variation in unit sales can be explained by the independent variables.
+ - With current variables, these model might not be used as predicting Product 3 sales. There are other variables contributing to unit sales of product 3.
+ - "Rating" can be removed if want to simplify the model but is not recommended, considering how low the current R-squared with all variables in the model. (0.468 >> 0.457)
+
+*****
+

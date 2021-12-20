@@ -1,0 +1,88 @@
+---
+title: "Course 516A Case1"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+cat("\014")
+```
+
+```{r, include=FALSE}
+# input data
+WeatherTrain = read.csv("ClimateChangeTrain.csv")
+WeatherTest = read.csv("ClimateChangeTest.csv") 
+str(WeatherTrain)
+# build linear model
+str(WeatherTrain)
+model1 = lm(Temp ~ MEI+CO2+CH4+N2O+CFC.11+CFC.12+TSI+Aerosols,data=WeatherTrain)
+```
+# a)
+##  i)
+```{r, include=TRUE}
+as.formula(
+paste0("y ~ ", round(coefficients(model1)[1],2), " + ",
+paste(sprintf("%.2f * %s",
+coefficients(model1)[-1],
+names(coefficients(model1)[-1])),
+collapse=" + ")
+)) 
+```
+##  ii)
+```{r, include=TRUE}
+summary(model1)
+```
+R-squared valued for this model is 0.7509
+The followoing indepedent variables are significant: MEI, CO2, CFC.11, CFC.12, TSI, and Aerosols.
+
+## iii)
+
+```{r}
+for (j in c('MEI','CH4','N2O','CFC.11','CFC.12','TSI','Aerosols')){
+  print (c('R squared for using',j,round(summary(lm(Temp ~ get(j),data=WeatherTrain))$r.squared,4) ))
+}
+```
+Those gas are highly correlated to human developmemnt and can be created and released at the same time. N2O and CFC.11 may have high correlations with other variables, causing multicollinearity in the model. 
+It's also odd to see that the Rsquare can reach 0.6063 only with "N2O" in the model, but "N2O" is considered as insignificant varibles after adding other varibales. These obersvation further proves the model needs some refinment on the variables it used. 
+
+#iv)
+
+```{r}
+cor(WeatherTrain$N2O,WeatherTrain)
+```
+N2O is highly correlated with following independent variables: CO2,CH4, CFC.12.
+
+```{r}
+cor(WeatherTrain$CFC.11,WeatherTrain)
+```
+CFC.11 is highly correlated with following independent variables: CH4, CFC.12.
+
+# b)
+```{r}
+model2 = lm(Temp ~ MEI+TSI+Aerosols+N2O,data=WeatherTrain)
+summary(model2)
+```
+## i)
+In previous model, the coefficient for N2O is -1.653e-02 and in the new model it's 2.532e-02. N2O in the new model are considered asscociated with higher global temperatures and have higher coefficient/contribution to the global temperatures.
+## ii)
+In the new model, both R-squared and adjusted R-squared dropped. However, all the included independent variables are signigicant to the model, which simplify the model and may prevent the model to overfit the training dataset.
+
+# c)
+```{r, include=FALSE}
+# simplified model
+WeatherPrdictions2 = predict(model2,newdata = WeatherTest)
+SSE = sum((WeatherTest$Temp - WeatherPrdictions2)^2)
+SST = sum((WeatherTest$Temp - mean(WeatherTrain$Temp))^2)
+1 - SSE/SST # This is Out-of-Sample R^2
+```
+The R-squared for the test dataset with simplified model is 0.4968. From the first glance, the R-squared for the test dataset is not really ideal but we aren't certain the model is bad. However, it can be crertain that the simplified model still have rooms for improvement when non-simplfied has shown to performed better on the test dataset , which is 0.6274.
+
+```{r, include=FALSE}
+# non-simplified model
+WeatherPrdictions1 = predict(model1,newdata = WeatherTest)
+SSE = sum((WeatherTest$Temp - WeatherPrdictions1)^2)
+SST = sum((WeatherTest$Temp - mean(WeatherTrain$Temp))^2)
+1 - SSE/SST # This is Out-of-Sample R^2
+```
+

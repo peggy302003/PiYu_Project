@@ -1,0 +1,269 @@
+---
+title: "Final_customer analytics"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+cat("\014")
+```
+
+```{r }
+library(tidyverse)
+library(readxl)
+library(dplyr)
+library(tidyr)
+#install.packages('fastDummies')
+library(fastDummies)
+RawData = read_excel("Data Keywords.xls",sheet=1)
+KeyWordCat = read_excel("Data Keywords.xls",sheet=2)
+RawData$Date <- as.Date(RawData$Date)
+names(RawData) <- make.names(names(RawData))
+names(KeyWordCat) <- make.names(names(KeyWordCat))
+df <- merge(RawData,KeyWordCat,by.x="Keyword.ID",by.y="KW.ID")
+df = select(df,-Category)
+
+# add variables 
+## CPC - cost per click
+df$CPC = df$Cost/df$Clicks
+## CTR - click through rate
+df$CTR = df$Clicks/df$Impressions
+## Conversion Rate
+df$Conv = df$Reservations/df$Clicks
+## CPR - cost per reservation  CPC/Conversion
+df$CPR = df$CPC/ df$Conv
+head(df)
+```
+
+
+#df2$Target2 <- ifelse(prediction.testing$PredictResponseRate >=cutoff, 1, 0)
+#str(df2)
+#str(df)
+# analysis on CTR 
+#df2$CTR_seg <-  transform(df2, group=cut(CTR), breaks=c(-Inf,1, 2, 3, Inf),labels=c('<1', 1, 2, 3,'>4'))
+
+# classification for attractive keywords
+
+prediction.testing$Target2 <- ifelse(prediction.testing$PredictResponseRate >=cutoff, 1, 0)
+
+results <- fastDummies::dummy_cols(df2, select_columns = c("Category.ID","Keyword.Type.ID"))
+results$weekday <- weekdays(results$Date) 
+results <- fastDummies::dummy_cols(results, select_columns = c("weekday"))
+str(results)
+results$weekend = results$weekday_Saturday+results$weekday_Sunday
+linearmodel_click = lm(Clicks~ weekend+Average.Position + Impressions+ Category.ID_0+ Category.ID_1 +Category.ID_2+Category.ID_3 + Category.ID_4+Category.ID_6+Keyword.Type.ID_0+ Keyword.Type.ID_1, data=results)
+summary(linearmodel_click)
+
+linearmodel_CPC = lm(CPC~ weekend+Average.Position + Impressions+ Category.ID_0+ Category.ID_1 +Category.ID_2+Category.ID_3 + Category.ID_4+Category.ID_6+Keyword.Type.ID_0+ Keyword.Type.ID_1, data=results)
+summary(linearmodel_CPC)
+
+linearmodel_reservations = lm(Reservations~ weekend+Clicks+ Average.Position + Impressions+ Category.ID_0+ Category.ID_1 +Category.ID_2+Category.ID_3 + Category.ID_4+Category.ID_6+Keyword.Type.ID_0+ Keyword.Type.ID_1, data=results)
+summary(linearmodel_reservations)
+
+linearmodel_cpr = lm(CPC~ Clicks+ weekend+ Average.Position + Impressions+ Category.ID_0+ Category.ID_1 +Category.ID_2+Category.ID_3 + Category.ID_4+Category.ID_6+Keyword.Type.ID_0+ Keyword.Type.ID_1, data=results)
+summary(linearmodel_cpr)
+data you haven
+what we want to find 
+what we want to model
+why 
+how
+str(results)
+
+summary(linearmodel_reservations)
+
+linearmodel_click = lm(Clicks~ `Average Position` + `Impressions`+ `Category ID_0`+ `Category ID_1` +`Category ID_2`+`Category ID_3` + `Category ID_4`+`Category ID_6`+`Keyword Type ID_0`+ `Keyword Type ID_1`, data=results)
+names(results)
+summary(linearmodel_click)
+#head(results)
+
+install.packages("caTools")
+library(caTools)
+install.packages("rpart")
+library(rpart)
+install.packages("rpart.plot")
+library(rpart.plot)
+install.packages("randomForest")
+library(randomForest)
+
+StevensTree = rpart(Clicks~ Average.Position + Impressions`+ `Category ID_0`+ `Category ID_1` +`Category ID_2`+`Category ID_3` + `Category ID_4`+`Category ID_6`+`Keyword Type ID_0`+ `Keyword Type ID_1`, method="class", data=results, minbucket=25)
+prp(StevensTree)
+
+RF = randomForest(Clicks~ Average.Position + Impressions+ Category.ID_0+ Category.ID_1 +Category.ID_2+Category.ID_3 + Category.ID_4+Category.ID_6+Keyword.Type.ID_0+ Keyword.Type.ID_1, data=results, ntree=200, nodesize=15)
+
+summary(RF)
+names(results)
+head(results)
+results$
+```
+# group by with keyword
+```{r} 
+library(tidyr)     
+
+RawData.groupby = 
+  RawData %>%
+  group_by(Keyword.ID) %>% 
+  dplyr::summarise(
+    Average.Position = mean(Average.Position,na.rm=TRUE),
+    Impressions= sum(Impressions),
+    Clicks= sum(Clicks),
+    Cost= sum(Cost),
+    Reservations=sum(Reservations)
+  )
+
+str(RawData)
+df.groupby <- merge(RawData.groupby,KeyWordCat,by.x="Keyword.ID",by.y="KW.ID")
+df.groupby = select(df.groupby,-Category)
+
+head(df.groupby)
+# add variables 
+## CPC - cost per click
+df.groupby$CPC = df.groupby$Cost/df.groupby$Clicks
+## CTR - click through rate
+df.groupby$CTR = df.groupby$Clicks/df.groupby$Impressions
+## Conversion Rate
+df.groupby$Conv = df.groupby$Reservations/df.groupby$Clicks
+## CPR - cost per reservation  CPC/Conversion
+df.groupby$CPR = df.groupby$CPC/ df.groupby$Conv
+
+
+#do nothing
+sum(df.groupby$Cost)
+sum(df.groupby$Reservations)
+table(df2$CPR)
+
+# Face Value
+df.groupby.facevalue = subset(df.groupby,df.groupby$CPR<=30)
+## how many keywords left
+tb = table(df.groupby.facevalue$Keyword.ID)
+nrow(tb)
+## total cost and reservation
+sum(df.groupby.facevalue$Cost)
+sum(df.groupby.facevalue$Reservations)
+table(df.groupby$CTR)
+mean(df.groupby$CTR)
+# CTR
+df.groupby.ctr = subset(df.groupby,df.groupby$CTR>=(sum(df.groupby$Click)/sum(df.groupby$Impressions)))
+tb.ctr = table(df.groupby.ctr$Keyword.ID)
+## how many keywords left
+nrow(tb.ctr)
+## total cost and reservation
+sum(df.groupby.ctr$Cost)
+sum(df.groupby.ctr$Reservations)
+mean(df2$CTR)
+table(df2$Conv>0)
+df2$Conv
+nrow(df2)
+
+df.groupby[df.groupby$Keyword.ID == 89,]
+
+
+
+# Analysis with tree model
+
+#install.packages("rpart")
+library(rpart)
+#install.packages("rpart.plot")
+library(rpart.plot)
+#install.packages("randomForest")
+library(randomForest)
+#install.packages("rattle")
+library(rattle)	
+
+# notes: removed impression lower than 100 from data
+df.tree.all = subset(df.groupby,Impressions>=100)
+df.tree.all <- fastDummies::dummy_cols(df.tree.all, select_columns = c("Category.ID","Keyword.Type.ID","X2nd.Category.ID"))
+## second categroy only use keyword count>=2
+names(df.tree.all)
+
+
+set.seed(1313)
+## attractive critiera : low CPR lower than 30
+df.tree.model1 = data.frame(df.tree.all)
+df.tree.model1$Target <- ifelse(df.tree.model1$CPR <=30, 1, 0)
+
+model1 = rpart(Target~ Average.Position+ Impressions + Category.ID_0 + Category.ID_1 +Category.ID_2+Category.ID_3 + Category.ID_4+Category.ID_6+ Keyword.Type.ID_0 
++ X2nd.Category.ID_3+ X2nd.Category.ID_6+ X2nd.Category.ID_12+ X2nd.Category.ID_13+ X2nd.Category.ID_16+ X2nd.Category.ID_21+ X2nd.Category.ID_23+ X2nd.Category.ID_25+ X2nd.Category.ID_30+ X2nd.Category.ID_31+ X2nd.Category.ID_33+ X2nd.Category.ID_34+ X2nd.Category.ID_35+ X2nd.Category.ID_41+ X2nd.Category.ID_43+ X2nd.Category.ID_46+ X2nd.Category.ID_49+ X2nd.Category.ID_50+ X2nd.Category.ID_51+ X2nd.Category.ID_54+ X2nd.Category.ID_56+ X2nd.Category.ID_57+ X2nd.Category.ID_60+ X2nd.Category.ID_62+ X2nd.Category.ID_66+ X2nd.Category.ID_68+ X2nd.Category.ID_69+ X2nd.Category.ID_79+ X2nd.Category.ID_84+ X2nd.Category.ID_85+ X2nd.Category.ID_87+X2nd.Category.ID_92, method="class", data=df.tree.model1, minbucket=20)
+prp(model1)
+rattle::fancyRpartPlot(model1)
+model1_nopositions = rpart(Target~ Category.ID_0 + Category.ID_1 +Category.ID_2+Category.ID_3 + Category.ID_4+Category.ID_6+ Keyword.Type.ID_0 
++ X2nd.Category.ID_3+ X2nd.Category.ID_6+ X2nd.Category.ID_12+ X2nd.Category.ID_13+ X2nd.Category.ID_16+ X2nd.Category.ID_21+ X2nd.Category.ID_23+ X2nd.Category.ID_25+ X2nd.Category.ID_30+ X2nd.Category.ID_31+ X2nd.Category.ID_33+ X2nd.Category.ID_34+ X2nd.Category.ID_35+ X2nd.Category.ID_41+ X2nd.Category.ID_43+ X2nd.Category.ID_46+ X2nd.Category.ID_49+ X2nd.Category.ID_50+ X2nd.Category.ID_51+ X2nd.Category.ID_54+ X2nd.Category.ID_56+ X2nd.Category.ID_57+ X2nd.Category.ID_60+ X2nd.Category.ID_62+ X2nd.Category.ID_66+ X2nd.Category.ID_68+ X2nd.Category.ID_69+ X2nd.Category.ID_79+ X2nd.Category.ID_84+ X2nd.Category.ID_85+ X2nd.Category.ID_87+X2nd.Category.ID_92, method="class", data=df.tree.model1, minbucket=20)
+prp(model1_nopositions)
+rattle::fancyRpartPlot(model1_nopositions)
+
+## attractive critiera : high CTR higher than 0.7% (overall average)
+df.tree.model2 = data.frame(df.tree.all)
+df.tree.model2$Target <- ifelse(df.tree.model1$CTR >=0.007, 1, 0)
+
+model2 = rpart(Target~ Average.Position+ Impressions + Category.ID_0 + Category.ID_1 +Category.ID_2+Category.ID_3 + Category.ID_4+Category.ID_6+ Keyword.Type.ID_0 
++ X2nd.Category.ID_3+ X2nd.Category.ID_6+ X2nd.Category.ID_12+ X2nd.Category.ID_13+ X2nd.Category.ID_16+ X2nd.Category.ID_21+ X2nd.Category.ID_23+ X2nd.Category.ID_25+ X2nd.Category.ID_30+ X2nd.Category.ID_31+ X2nd.Category.ID_33+ X2nd.Category.ID_34+ X2nd.Category.ID_35+ X2nd.Category.ID_41+ X2nd.Category.ID_43+ X2nd.Category.ID_46+ X2nd.Category.ID_49+ X2nd.Category.ID_50+ X2nd.Category.ID_51+ X2nd.Category.ID_54+ X2nd.Category.ID_56+ X2nd.Category.ID_57+ X2nd.Category.ID_60+ X2nd.Category.ID_62+ X2nd.Category.ID_66+ X2nd.Category.ID_68+ X2nd.Category.ID_69+ X2nd.Category.ID_79+ X2nd.Category.ID_84+ X2nd.Category.ID_85+ X2nd.Category.ID_87+X2nd.Category.ID_92, method="class", data=df.tree.model2, minbucket=20)
+#prp(model1)
+rattle::fancyRpartPlot(model2)
+model2_nopositions = rpart(Target~  Category.ID_0 + Category.ID_1 +Category.ID_2+Category.ID_3 + Category.ID_4+Category.ID_6+ Keyword.Type.ID_0 
++ X2nd.Category.ID_3+ X2nd.Category.ID_6+ X2nd.Category.ID_12+ X2nd.Category.ID_13+ X2nd.Category.ID_16+ X2nd.Category.ID_21+ X2nd.Category.ID_23+ X2nd.Category.ID_25+ X2nd.Category.ID_30+ X2nd.Category.ID_31+ X2nd.Category.ID_33+ X2nd.Category.ID_34+ X2nd.Category.ID_35+ X2nd.Category.ID_41+ X2nd.Category.ID_43+ X2nd.Category.ID_46+ X2nd.Category.ID_49+ X2nd.Category.ID_50+ X2nd.Category.ID_51+ X2nd.Category.ID_54+ X2nd.Category.ID_56+ X2nd.Category.ID_57+ X2nd.Category.ID_60+ X2nd.Category.ID_62+ X2nd.Category.ID_66+ X2nd.Category.ID_68+ X2nd.Category.ID_69+ X2nd.Category.ID_79+ X2nd.Category.ID_84+ X2nd.Category.ID_85+ X2nd.Category.ID_87+X2nd.Category.ID_92, method="class", data=df.tree.model2, minbucket=25)
+#prp(model1)
+rattle::fancyRpartPlot(model2_nopositions)
+
+
+
+## attractive critiera : low CPR lower than 30 or high CTR higher than 0.7% (overall average)
+df.tree.model3 = data.frame(df.tree.all)
+df.tree.model3$Target <- ifelse(df.tree.model1$CPR <=30 | df.tree.model1$CTR >=0.007 , 1, 0)
+
+model3 = rpart(Target~ Average.Position+ Impressions + Category.ID_0 + Category.ID_1 +Category.ID_2+Category.ID_3 + Category.ID_4+Category.ID_6+ Keyword.Type.ID_0 
++ X2nd.Category.ID_3+x X2nd.Category.ID_6+ X2nd.Category.ID_12+ X2nd.Category.ID_13+ X2nd.Category.ID_16+ X2nd.Category.ID_21+ X2nd.Category.ID_23+ X2nd.Category.ID_25+ X2nd.Category.ID_30+ X2nd.Category.ID_31+ X2nd.Category.ID_33+ X2nd.Category.ID_34+ X2nd.Category.ID_35+ X2nd.Category.ID_41+ X2nd.Category.ID_43+ X2nd.Category.ID_46+ X2nd.Category.ID_49+ X2nd.Category.ID_50+ X2nd.Category.ID_51+ X2nd.Category.ID_54+ X2nd.Category.ID_56+ X2nd.Category.ID_57+ X2nd.Category.ID_60+ X2nd.Category.ID_62+ X2nd.Category.ID_66+ X2nd.Category.ID_68+ X2nd.Category.ID_69+ X2nd.Category.ID_79+ X2nd.Category.ID_84+ X2nd.Category.ID_85+ X2nd.Category.ID_87+X2nd.Category.ID_92, method="class", data=df.tree.model3, minbucket=20)
+#prp(model1)
+rattle::fancyRpartPlot(model3)
+model3_nopositions = rpart(Target~  Category.ID_0 + Category.ID_1 +Category.ID_2+Category.ID_3 + Category.ID_4+Category.ID_6+ Keyword.Type.ID_0 
++ X2nd.Category.ID_3+ X2nd.Category.ID_6+ X2nd.Category.ID_12+ X2nd.Category.ID_13+ X2nd.Category.ID_16+ X2nd.Category.ID_21+ X2nd.Category.ID_23+ X2nd.Category.ID_25+ X2nd.Category.ID_30+ X2nd.Category.ID_31+ X2nd.Category.ID_33+ X2nd.Category.ID_34+ X2nd.Category.ID_35+ X2nd.Category.ID_41+ X2nd.Category.ID_43+ X2nd.Category.ID_46+ X2nd.Category.ID_49+ X2nd.Category.ID_50+ X2nd.Category.ID_51+ X2nd.Category.ID_54+ X2nd.Category.ID_56+ X2nd.Category.ID_57+ X2nd.Category.ID_60+ X2nd.Category.ID_62+ X2nd.Category.ID_66+ X2nd.Category.ID_68+ X2nd.Category.ID_69+ X2nd.Category.ID_79+ X2nd.Category.ID_84+ X2nd.Category.ID_85+ X2nd.Category.ID_87+X2nd.Category.ID_92, method="class", data=df.tree.model3, minbucket=10)
+prp(model3_nopositions)
+rattle::fancyRpartPlot(model3_nopositions)
+
+
+
+
+df.groupby$cost.reservation = df.groupby$Cost/ df.groupby$Reservations
+df.groupby[df.groupby$Keyword.ID == 89,]
+table(df.groupby$CPR<10)
+sum(df.groupby$Cost)/sum(df.groupby$Reservations)
+
+
+```
+
+
+df[which.max(df$Reservations),]
+test = df[1:3,]
+test
+#results <- fastDummies::dummy_cols(df)
+#results <- fastDummies::dummy_cols(df, select_columns = "Category ID")
+#dataf <- dummy_cols(dataf, select_columns = 'rank')
+head(df)
+# analysis on Conversion Rate
+
+linearmodel_click = lm(CPC~ `Average Position`+ Impressions + `Category ID` + `2nd Category ID` + `Keyword Type ID`, data=df)
+summary(linearmodel_click)
+cor(df$`Average Position`,df$Clicks)
+cor(df$`Impressions`,df$Clicks)
+str(df)
+subset()
+
+sort_impres sions.df <- hsb2[order(read) , ]
+df[order()]
+
+df
+
+subset(df,df$`Keyword ID`==277)
+df[which.min(df$CPC),]
+df[which.max(df$CPC),]
+
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

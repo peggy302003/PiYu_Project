@@ -1,0 +1,136 @@
+---
+title: "Case 2 Loan Repayment"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install.packages("caTools")
+library(caTools)
+df = read.csv("Loans.csv")
+head(df)
+set.seed(1234)
+split = sample.split(df$NotFullyPaid, SplitRatio = 0.70)
+Train = subset(df, split==TRUE)
+Test = subset(df, split==FALSE)
+```
+# a)
+## i) Baseline model
+Accuracy of the baseline model is 0.8398886
+```{r}
+Baseline_score = 1- sum(Test$NotFullyPaid)/nrow(Test)
+Baseline_score
+```
+## ii) Logistic model
+The following are the significant independent variables for the logistic model:
+ CreditPolicy,
+ Purposecredit_card,Purposedebt_consolidation,Purposesmall_business,
+ Installment,LogAnnualInc,DaysWithCrLine,RevolBal,InqLast6mths,PubRec
+```{r}
+Logitmodel = glm(NotFullyPaid ~ CreditPolicy+ Purpose+ IntRate + Installment+ LogAnnualInc+ Dti+ Fico+ DaysWithCrLine+ RevolBal+ RevolUtil+ InqLast6mths+ Delinq2yrs+ PubRec  , data = Train, family=binomial)
+summary(Logitmodel)
+```
+
+## iii) Logistic model
+Logit(A) - Logit(B)  
+=  7.357e-03 * FICO score for A -(-7.357e-03 * FICO score for B)
+= -7.357e-03 *700 - -7.357e-03 *710
+= -7.357e-03 * (700-710)
+= -7.357e-03 * 10 
+= -0.07357
+
+## iv)
+Accuracy of the logistic model is 0.8402367
+Accuracy of the baseline model is 0.8398886
+The logistic model is slightly better than baseline but not much.
+
+```{r}
+PredictTest = predict(Logitmodel, type="response", newdata = Test)
+Test$PredictRisk = PredictTest
+ResultMetrix = table(Test$NotFullyPaid,Test$PredictRisk>0.5)
+sum(diag(ResultMetrix))/sum(ResultMetrix)
+Baseline_score
+```
+
+
+# b) Using Inrate as smart baseline
+## i) 
+Inrate is significant in this smart baseline model. But it was not significant in our initial logistic model that has all the variable. 
+Cutomers' interest rate usually determined by customers' overall credit performance which is usually factors for lenders to assess borrowers' repay ability. If the borrowers judged by LendingClub to be more risky are assigned higher interest rate.
+Based on the above, we can conclude that borrowers' interest rate might have a high correrlation with other variables, causing multicollinearity in the model. 
+```{r}
+model.inrateonly = glm(NotFullyPaid ~ IntRate   , data = Train, family=binomial)
+summary(Logitmodel)
+summary(model.inrateonly)
+
+```
+
+
+## ii) 
+The highest predicted probablity of a loan not being payback in full on the test set is 0.4516973.
+If we used a threshold of 0.5 to make predictions, none of the borrowers will be predicted as not able to paid back in full.
+```{r}
+PredictTest_inrate = predict(model.inrateonly, type="response", newdata = Test)
+max(PredictTest_inrate)
+```
+
+# c)
+## i) 
+$11.972 will be paid back after 3 years.
+```{r}
+c = 10
+c_3yrs =  c * exp(0.06*3)
+print(c_3yrs)
+exp(0.06*3)
+```
+## ii)
+profit if paid back in full: c*exp(r*t) - c 
+profit if don't paid back at all: $-c
+
+## iii)
+Assumptions: The borrower either payback full or no pay back at all.
+Investment: $1
+Interest Rate: InRate
+Loan Period: 3 years
+The maximum profit of any loan in the test data set is $0.889.
+```{r}
+c = 1
+Test$Profit <- ifelse(Test$NotFullyPaid<1, c * exp(Test$IntRate*3) - c , -c)
+max(Test$Profit)
+head(Test)
+
+```
+
+## iv)
+Investment: $1
+Interest Rate: InRate 
+The average profit of the loans with high interest rate (a rate of at least 15%) is $0.2691
+Around 22.72% of the hight-interest loan were not pay back in full.
+```{r}
+c=1
+HighInterest = subset(Test,IntRate>=0.15)
+HighInterest$Profit <- ifelse(HighInterest$NotFullyPaid<1, c * exp(HighInterest$IntRate*3) - c , -c)
+mean(HighInterest$Profit)
+sum(HighInterest$NotFullyPaid)/nrow(HighInterest)
+```
+## v)
+The profit of an investors who invested $1 in each of these loans is $36.35442
+16 out of the selected 100 loans were not paid back in full.
+Compared to the simple strategy which brings $20.94 for a $100 investment, the profit brought by the HighInterest Rate startegy is $15.40 higher.
+```{r}
+SelectedLoans= head(HighInterest[order(HighInterest$PredictRisk),],100)
+sum(SelectedLoans$Profit)
+sum(SelectedLoans$NotFullyPaid)
+20.95-36.35442
+```
+#d)
+One of the most important assumptions of predictive modeling is that the future will continue to be like the past.
+However, if something changes, then the predictions in place will be invalid and potentially useless.
+It's more challenging if the observation time for the prediction is longer which often be seen in finacial situation. For example, in this case, we have to predict will the customer always fully paid the installment witin 3 years. Anything incidents could happended during 3 years that affect borrowers' ability to pay back, and which cannot be predict when we run the initial predictions. 
+The possible way to solve this problem is to continuing obeserving their behaviors and finacial abilities within observation time, such as their credit score, paying records, or just regular check in phone call to make sure if their chance on not able to fully pay back increase we can detect it early.  
+

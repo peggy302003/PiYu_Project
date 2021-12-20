@@ -1,0 +1,150 @@
+---
+title: "Case 3 Wiki"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+cat("\014")
+```
+## Initial 
+```{r,include=FALSE}
+library(caTools)
+library(rpart)
+library(rpart.plot)
+library(rattle)	
+library(randomForest)
+library(ROCR)
+df = read.csv("Wikipedia.csv")
+```
+```{r,}
+set.seed(1234)
+```
+
+# a
+## i) There are `r sum(df$Vandal)` cases of vandalism were detected in the history of this page.
+## ii) 
+* Avg number of words that were added: `r mean(df$NumWordsAdded)`
+* Avg number of words that were removed: `r mean(df$NumWordsRemoved)`
+
+## iii)
+"LoggedIn"" is the most correlated(negatively) variables to "Vandal".
+``` {r, include=TRUE} 
+cor(df)
+```
+
+# b) Accuracy for baseline model is 0.5314.
+```{r, include=FALSE}
+split = sample.split(df$Vandal, SplitRatio = 0.70)
+Train = subset(df, split==TRUE)
+Test = subset(df, split==FALSE)
+baseline.accuracy = 1- sum(Test$Vandal)/nrow(Test)
+```
+# c) CART TREE
+### Using 30% of the test dataset as a validation set to adjust parameter.
+```{r,include=TRUE}
+# create validation data
+split_valid = sample.split(Test$Vandal, SplitRatio = 0.70)
+Valid = subset(Test, split_valid==FALSE)
+```
+```{r,include=FALSE} 
+Cartmodel= rpart(Vandal ~ Minor + LoggedIn + HTTP + NumWordsAdded + NumWordsRemoved ,data=Train, minbucket=25,method="class")
+
+Train_CartPredict_prob = predict(Cartmodel)
+table_train = table(Train$Vandal,Train_CartPredict_prob[,2] > 0.5) 
+
+Valid_CartPredict_prob = predict(Cartmodel,newdata=Valid)
+table_valid = table(Valid$Vandal,Valid_CartPredict_prob[,2] > 0.5) 
+
+ROCRpred_train = prediction(Train_CartPredict_prob[,2], Train$Vandal)
+ROCRpred_valid = prediction(Valid_CartPredict_prob[,2], Valid$Vandal)
+```
+### For the initial CART model, minbucket has been set as 25.
+ The accuracy score for training set is `r sum(diag(table_train))/sum(table_train)` and validation set is `r sum(diag(table_valid))/sum(table_valid)`. Better than baseline and no sign for overfitting.
+ The AUC score for training set is  `r as.numeric(performance(ROCRpred_train, "auc")@y.values) ` validation set is`r as.numeric(performance(ROCRpred_valid, "auc")@y.values) ` Better than baseline and no sign for overfitting.
+
+### To ensure model is not under fitting, the minbucket was set to 1 and all the score remain the same.
+
+```{r,include=FALSE} 
+# minbucket = 1
+Cartmodel= rpart(Vandal ~ Minor + LoggedIn + HTTP + NumWordsAdded + NumWordsRemoved ,data=Train, minbucket=1,method="class")
+
+Train_CartPredict_prob = predict(Cartmodel)
+table_train = table(Train$Vandal,Train_CartPredict_prob[,2] > 0.5) 
+
+Valid_CartPredict_prob = predict(Cartmodel,newdata=Valid)
+table_valid = table(Valid$Vandal,Valid_CartPredict_prob[,2] > 0.5) 
+
+# Training Accuracy 
+sum(diag(table_train))/sum(table_train)
+ROCRpred_train = prediction(Train_CartPredict_prob[,2], Train$Vandal)
+as.numeric(performance(ROCRpred_train, "auc")@y.values) 
+
+# Validation Accuracy 
+sum(diag(table_valid))/sum(table_valid)
+ROCRpred_valid = prediction(Valid_CartPredict_prob[,2], Valid$Vandal)
+as.numeric(performance(ROCRpred_valid, "auc")@y.values) 
+```
+### Minbucket is set as 25 in the Final CART model.
+```{r}
+Cartmodel= rpart(Vandal ~ Minor + LoggedIn + HTTP + NumWordsAdded + NumWordsRemoved ,data=Train, minbucket=25,method="class")
+```
+## i) 
+From the CART tree plot we can see that "Loggedin", "NumWordsAdded" and "NumWordsRemoved" were used in the tree. The most siginifiant varible is "Loggedin"" since it's the first variable the model chose to use for split.
+```{r,include=TRUE}
+prp(Cartmodel)
+```
+
+```{r,include=FALSE}
+Test_CartPredict_prob = predict(Cartmodel,newdata=Test) 
+table_test = table(Test$Vandal, Test_CartPredict_prob[,2] > 0.5)
+```
+## ii) The accuracy for the testing dataset is `r sum(diag(table_test))/sum(table_test)`. Better than Baseline.
+
+# d) Random Forest
+```{r}
+Train$Vandal = as.factor(Train$Vandal)
+Valid$Vandal = as.factor(Valid$Vandal)
+Test$Vandal = as.factor(Test$Vandal)
+```
+## Default --  ntree = 500 and nodesize=1
+```{r}
+Forest.model = randomForest(Vandal ~ Minor + LoggedIn + HTTP + NumWordsAdded + NumWordsRemoved, data = Train)
+```
+```{r,include=FALSE}
+Train_ForestPredict = predict(Forest.model) 
+table_train_f = table(Train$Vandal, Train_ForestPredict)
+
+Valid_ForestPredict = predict(Forest.model, newdata=Valid) 
+table_valid_f= table(Valid$Vandal, Valid_ForestPredict)
+```
+ The accuracy score for training set is  `r sum(diag(table_train_f))/sum(table_train_f)` and validation set is `r sum(diag(table_valid_f))/sum(table_valid_f)`. Better than baseline, but may have risk for overfitting.
+
+## Final model after few adjustment -- ntree = 400 and nodesize=5
+```{r}
+Forest.model = randomForest(Vandal ~ Minor + LoggedIn + HTTP + NumWordsAdded + NumWordsRemoved, data = Train, ntree=400, nodesize=5)
+```
+```{r,include=FALSE}
+Test_ForestPredict = predict(Forest.model, newdata=Test) 
+table_test_f= table(Test$Vandal, Test_ForestPredict)
+```
+On the testing dataset, the accuracy score for the CART model`r sum(diag(table_test))/sum(table_test)` and the accuracy score for the RandomForest model`r sum(diag(table_test_f))/sum(table_test_f)`. 
+Both of models are better than baseline but RandomForest model perform better than CART model on the testing dataset.
+
+# e)
+## I) 
+In general, I believe the model may be usefull for Wikipedia to indentify vandalism but could be more sophisticated. The model cosidered if the user Log in or not to be the most siginificant variable, showing the models have the capabilitis to determine vandalism, since logged in user is less likely to create vandalized contets. However, the definition of the vandalism may need to more clairification. For current scenerio, any edits that have been reverted is considered as vandalism. However,reverts sometime happened when advance users simply didn't like their new edits and redo them with revert function, but it does not means the reverted edits are inappropriate. For more precise labeling on vandalized edits, Wikipedia should ask users to label if the reverted contents are vandalism or not. <br />
+
+## II)  
+I would add few variables such as  
+1. If the new edits include cititation, since most valid contents will include citation.  
+2. How many pages the user have edits before this edits? If it's a spam, they may purpoely change lots of pages in the short amount anout of time.  
+
+### III) 
+Yes this model can easily extened to other pages because the model does not include any variable that is higly related to the page contents itself. 
+
+
+

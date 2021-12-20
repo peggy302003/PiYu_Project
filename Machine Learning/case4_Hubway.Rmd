@@ -1,0 +1,126 @@
+---
+title: "Case4 Subway"
+output:
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#Clear variables and screen.
+rm(list=ls())
+cat("\014")
+```
+```{r,include=FALSE}
+library(caret)
+df = read.csv("HubwayTrips.csv")
+```
+# a) Normalization
+## i) It's important to normalize the data because the similarity of two data points are measure by the distance in clustering. 
+Distance is highly influenced by the scale of variables, so it is important to normalized variables before clustering. 
+If cluster the Hubway dataset without the normalization, the greater number of age and duration may cause some variables insignificant during clustering.
+
+## ii) 
+```{r,include=FALSE}
+# Normalization
+preproc = preProcess(df)
+dfnorm = predict(preproc, df)
+mean(dfnorm$Weekday)
+sd(dfnorm$Weekday)
+names(dfnorm)
+```
+```{r,include=TRUE}
+for(i in 1:ncol(dfnorm)) {       # for-loop over columns
+  print(sprintf("colnames %s, mean: %e, sd: %f:" , names(df[i]), mean(dfnorm[[i]]),sd(dfnorm[[i]])
+                )
+        )
+}
+```
+# b) K-means clustering
+```{r,include=FALSE}
+set.seed(1234)
+KmeansClustering = kmeans(dfnorm, centers = 10)
+```
+## i)
+```{r,include=TRUE}
+table(KmeansClustering$cluster)
+```
+## ii)
+```{r,include=FALSE}
+
+for(i in 1:ncol(df)) {       # for-loop over columns
+  print(sprintf("%s", names(df[i])))
+  print(tapply(df[[i]], KmeansClustering$cluster, mean))
+}
+```
+
+### Cluster 1- senior male worker commute in the morning
+Always ride the bikes in weekday morning, primarily male, the oldest group, shorter trip, riding the bike to work or running errands for works.
+
+### Cluster 2-  weekend travelers
+Only ride the bikes on the weekend, could be any time of the day, around 33 years old, second-longest trip duration, possibly riding the bike around for leisure activities.
+
+### Cluster 3- uncertain
+Longest trip, evening>afternoon>morning, mostly weekday sometime weekend, 70% male, slightly old
+
+### Cluster 4 - female ride the bike to run errands
+Weekday Afternoon, female, 35 years old average
+
+### Cluster 5 - senior male ride the bike to run errands
+weekday afternoon, short trip, mostly male
+
+### Cluster 6 - worker commute in the evening
+weekday evening, the youngest group 
+
+### Cluster 7 - young male commute worker
+The shortest trip, always ride in weekday morning, all male, around 30 years old(below average), riding the bike to work or running errands for works.
+
+### Cluster 8 - midnight worker or night owl
+Always ride between 12am-6am no apparent preference on weekends and weekdays, around 29(below average), slightly more male
+
+### Cluster 9 - running business errands for work
+Weekday Afternoon, male, around 30 years old (below average)
+
+### Cluster 10 - female worker commute in the morning 
+Morning weekday, all female, around 35 years old(average)
+
+## iii)
+Yes, for me, cluster 3 is very interesting. They have the most extended trip, which brings the most profit. However, it's not easy to determine who they are from the information we had. Are they tourists? Or did they rode the bike for exercise purposes? There is so much to explore in this cluster.
+
+## iv)
+We should have fewer clusters than 10. Since we only work with limited columns, it's difficult for the marketing team to develop ten different strategies for each group based on the insights we offered. For example, the current cluster result has divided male morning commuters into young males and senior males. We may know they share the same intention when renting a bike, but it's fairly challenging to customize strategies only based on age differences. It's also not cost-efficient to design a strategy for a small group of people, which is caused by too many clusters.
+
+# c)
+i)
+```{r,include=TRUE}
+set.seed(1234)
+KmeansClustering = kmeans(dfnorm, centers = 6)
+table(KmeansClustering$cluster)
+mean(df$Male)
+```
+## ii)
+```{r,include=FALSE}
+for(i in 1:ncol(df)) {       # for-loop over columns
+  print(sprintf("%s", names(df[i])))
+  print(tapply(df[[i]], KmeansClustering$cluster, mean))
+}
+```
+### Cluster 1 morning commuter
+Always weekday morning, male rate and age similar to the overall average. Shortest trip.
+
+### Cluster 2 weekend traveler
+Only on weekends, ride during any time of the day. Slightly younger than average.
+
+### Cluster 3 uncertain
+Mostly ride in the weekday evening, longest trip, oldest group(significantly older than average), more male
+
+### Cluster 4 housewife/female afternoon commuter
+only ride in weekday, mostly afternoon, some night, all female
+
+### Cluster 5 house husband/male afternoon commuter
+only ride in weekday, mostly afternoon, slightly older, short trip, all male
+
+### Cluster 6 Young people hanging out at night
+youngest, only in weekday evening, slightly lower male rate but close to average.
+
+## iii) 
+Compared to ten clusters, six clusters still keep the most interesting group with the longest trip duration. It segments riding records primarily based on behaviors such as weekday/weekend and time of the day, making it easier for the marketing team to design marketing strategies. We can select people who ride the bike for different purposes, such as commuting to work with these six clusters. Even though there are fewer clusters with pure traits (such as all 0 or all 1 on "Night"), we can still determine the dominant characters of each group.
